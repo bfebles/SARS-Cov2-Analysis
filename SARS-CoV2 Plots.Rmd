@@ -78,6 +78,7 @@ combined_df4<-combined_df3%>%
 ```
 
 ```{r}
+#convert 3 letter AA code to one letter code.
 combined_df5<-combined_df4%>%
   mutate(AA_Change=
            str_replace_all(HGVS_P,c(
