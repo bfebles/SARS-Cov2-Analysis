@@ -1,0 +1,250 @@
+---
+title: "SARS-CoV2 Variant Plot"
+author: "Binita febles"
+date: "9/16/2021"
+output: html_document
+---
+
+
+## Load libraries
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(RColorBrewer)
+library(stringr)
+```
+
+## Mutation Plot
+
+```{r samples}
+setwd("/Users/binitafebles/Desktop/Handley_Lab/Artic_renamed/combined_snpsift")
+#load samples from all five plates separately
+df1<-read.csv("feb_sample.tsv", sep = "")
+df2<-read.csv("mar_sample.tsv", sep = "")
+df3<-read.csv("apr_sample.tsv", sep = "")
+df4<-read.csv("may_sample.tsv", sep = "")
+df5<-read.csv("june_sample.tsv", sep = "")
+df6<-read.csv("july_sample.tsv", sep = "")
+```
+
+```{r}
+# concatenate all dfs into one by rows (rbind)
+combined_df<-rbind(df1,df2,df3,df4,df5,df6)
+```
+
+```{r}
+#remove rows without any snpeff annotations (most likely samples without any mutations)
+combined_df1<-combined_df[!(combined_df$SAMPLE=="SAMPLE"),]
+```
+
+```{r}
+#rename certain column names
+combined_df2<-rename(combined_df1,EFFECT=ANN.0..EFFECT,GENE=ANN.0..GENE, HGVS_P=ANN.0..HGVS_P)
+```
+
+```{r}
+combined_df2$POS<-as.numeric(combined_df2$POS)
+#some of the gene position aren't correctly annotated. so created new column with Gene name based on gene position.
+combined_df3<-combined_df2%>%
+  mutate(GENE_POS = case_when(
+    POS>=1 & POS<=265 ~ "5'UTR",
+    POS>=266 & POS<=21555 ~ 'ORF1ab',
+    POS>=21563 & POS<=25384 ~ 'S',
+    POS>=25393 & POS<=26220 ~ 'ORF3a',
+    POS>=26245 & POS<=26472 ~ 'E',
+    POS>=26523 & POS<=27191 ~ 'M',
+    POS>=27202 & POS<=27387 ~ 'ORF6',
+    POS>=27394 & POS<=27759 ~ 'ORF7a',
+    POS>=27756 & POS<=27887 ~ 'ORF7b',
+    POS>=27894 & POS<=28259 ~ 'ORF8',
+    POS>=28274 & POS<=29533 ~ 'N',
+    POS>=29558 & POS<=29674 ~ 'ORF10',
+    POS>=29675 & POS<=29903 ~ "3'UTR",
+    TRUE ~ GENE))
+
+```
+
+```{r}
+#add new col 'VARTYPE' to determine whether the variant is snp,insertion or deletion based on the length of characters in REF and ALT col.
+combined_df4<-combined_df3%>% 
+  mutate(VARTYPE = case_when(
+    nchar(ALT) == nchar(REF) ~ "SNP",
+    nchar(ALT) > nchar(REF) ~ "INS",
+    nchar(ALT) < nchar(REF) ~ "DEL"
+  ))
+
+```
+
+```{r}
+combined_df5<-combined_df4%>%
+  mutate(AA_Change=
+           str_replace_all(HGVS_P,c(
+             'Ala'= 'A','Arg'='R','Asn'='N','Asp'='D','Cys'='C','Gln'='Q',
+             'Glu'='E','Gly'='G','His'='H','Ile'='I','Leu'='L','Lys'='K',
+             'Met'='M','Phe'='F','Pro'='P','Ser'='S','Thr'='T','Trp'='W',
+             'Tyr'='Y','Val'='V','Asx'='B','Glx'='Z')))
+```
+
+```{r,fig.width=10}
+variant_plot<-combined_df5 %>%
+  ggplot(aes(x=POS,y=SAMPLE))+
+  geom_rect(aes(linetype= "ORF1ab"),xmin = 266,xmax = 21555,ymin = -Inf,ymax = Inf,fill="yellow2",alpha = 0.01)+
+  geom_rect(aes(linetype= "S"),xmin = 21563,xmax = 25384,ymin = -Inf,ymax =Inf,fill="powderblue",alpha = 0.01)+
+  geom_rect(aes(linetype= "ORF3a"),xmin = 25393,xmax = 26220,ymin = -Inf,ymax = Inf,fill="orange", alpha = 0.01)+
+  geom_rect(aes(linetype= "E"),xmin = 26245,xmax = 26472,ymin = -Inf,ymax = Inf,fill="lightslateblue",alpha = 0.01)+
+  geom_rect(aes(linetype= "M"),xmin = 26523,xmax = 27191,ymin = -Inf,ymax = Inf,fill="palevioletred1",alpha = 0.01)+
+  geom_rect(aes(linetype= "ORF6"),xmin = 27202,xmax = 27387,ymin = -Inf,ymax = Inf,fill="darkseagreen1",alpha = 0.01)+
+  geom_rect(aes(linetype= "ORF7a"),xmin = 27394,xmax = 27759,ymin = -Inf,ymax = Inf,fill="tan",alpha = 0.01)+
+  geom_rect(aes(linetype= "ORF7b"),xmin = 27756,xmax = 27887,ymin = -Inf,ymax = Inf,fill="lightsalmon",alpha = 0.01)+
+  geom_rect(aes(linetype= "ORF8"),xmin = 27894,xmax = 28259,ymin = -Inf,ymax = Inf,fill="orchid1",alpha = 0.01)+
+  geom_rect(aes(linetype= "N"),xmin = 28274,xmax = 29533,ymin = -Inf,ymax = Inf,fill="aquamarine",alpha = 0.01)+
+  geom_rect(aes(linetype= "ORF10"),xmin = 29558,xmax = 29674,ymin = -Inf,ymax = Inf,fill="olivedrab1",alpha = 0.01)+
+  scale_linetype_manual(name = "GENE",values= c("ORF1ab"=0,"S"=0,"ORF3a"=0,"E"=0,"M"=0,"ORF6"=0,"ORF7a"=0,"ORF7b"=0,"ORF8"=0,"N"=0,"ORF10"=0),
+                        labels=c("ORF1ab","S","ORF3a","E","M","ORF6","ORF7a","ORF7b","ORF8","N","ORF10"),
+                        guide=guide_legend(override.aes = list(fill = c("yellow2","powderblue","orange","lightslateblue","palevioletred1","darkseagreen1","tan","lightsalmon","orchid1","aquamarine","olivedrab1"),
+                                                               alpha = .5)))+
+  scale_x_continuous(breaks = c(0,2500,5000,7500,10000,12500,15000,17500,20000,22500,25000,27500,30000), expand = c(0, 0))+
+  geom_jitter(position = position_jitter(width = 0.05, height = 0.05), alpha=1.5,aes(color=VARTYPE))+
+  labs(x="GENE",y="SAMPLE", title = "Variants ")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
+  scale_color_manual(values=c("SNP" = "gray40","DEL" = "orangered", "INS" ="blue"),name = "VARIANT")+
+  theme(axis.text.y = element_blank())+
+  theme(legend.position = "bottom")
+
+variant_plot
+
+```
+
+## 'S' gene mutation plot
+
+```{r}
+S_gene<-combined_df5%>%
+  select(SAMPLE,POS,GENE_POS,VARTYPE,EFFECT,AA_Change)%>%
+  filter(GENE_POS=="S")
+```
+
+```{r}
+s_plot<-S_gene%>%
+  ggplot(aes(x=POS,y=SAMPLE,
+             text=paste(
+               "Sample:", SAMPLE,'\n',
+               "Gene:",GENE_POS,'\n',
+               "Position:",POS,'\n',
+               "Type:",VARTYPE,'\n',
+               "Effect:",EFFECT,'\n',
+               "AA Change:",AA_Change,'\n',
+               sep = ""
+             ))) +
+  geom_jitter(aes(color=AA_Change))+
+  labs(x="Gene S",y="SAMPLE", title = "Variants across Gene S ")+
+  scale_x_continuous(breaks = c(21563,23473,25384))+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
+  theme(axis.text.y = element_blank())
+ggplotly(s_plot,tooltip = "text")
+```
+
+## Ns Plot
+
+```{r}
+df_N<-read.csv("/Users/binitafebles/Desktop/Handley_Lab/Artic_renamed/full_SARS_COV2_MASTER_SPREADSHEET.csv")
+df_N1<-df_N%>%
+  select(Submission_ID, Month.Collected,Pangolin_lineage, Nextclade_lineage,totalMissing,missing)%>%
+  rename(SAMPLE=Submission_ID)%>%
+  filter(Pangolin_lineage!="None")
+```
+
+```{r}
+#set all blank cells to NA
+df_N1[df_N1==""] <-NA
+```
+
+```{r}
+#remove rows with NA
+df_N1<-na.omit(df_N1)
+```
+
+```{r}
+#split col 'missing' with ',' and print in next line
+df_N1<-df_N1 %>%
+  mutate(missing = strsplit(as.character(missing), ",")) %>%
+  unnest(missing)
+```
+
+```{r}
+#split col 'missing' into two diff columns 'mis_start' and 'mis_end' separating with delimeter '-'
+df_N2<-separate(df_N1,col=missing,into = c("mis_start", "mis_end"),sep = "\\-")
+```
+
+```{r}
+# remove NA from col mis_start and replace with value from col mis_end
+df_N2$mis_start[is.na(df_N2$mis_start)]<-df_N2$mis_end[is.na(df_N2$mis_start)] 
+```
+
+```{r}
+# remove NA from col mis_end and replace with value from col mis_start
+df_N2$mis_end[is.na(df_N2$mis_end)]<-df_N2$mis_start[is.na(df_N2$mis_end)] 
+```
+
+```{r}
+#col mis_start and mis_end are characters, so change it to numeric
+df_N2$mis_start<-as.numeric(df_N2$mis_start) # convert character into numeric
+df_N2$mis_end<-as.numeric(df_N2$mis_end)
+```
+
+```{r}
+#add new col 'Total' that calculates total length of missing N at specific position
+df_N3<-df_N2 %>%
+  mutate(Total_mis = mis_end - mis_start)
+```
+
+```{r,fig.width=15,fig.height=20}
+N_plot<-df_N3%>%
+  ggplot(aes(x = mis_start, y = SAMPLE, color=Pangolin_lineage))+
+  geom_linerange(aes(xmin = mis_start, xmax = mis_end))+ 
+  scale_x_continuous(breaks = c(0,2500,5000,7500,10000,12500,15000,17500,20000,22500,25000,27500,30000), expand = c(0, 0))+
+  labs(x="Position",y="Sample", title = "Ns Distribution")+
+  theme(legend.text = element_text(size=12))+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
+  theme(legend.position = "bottom")
+
+N_plot
+
+```
+## Nucleotide Substitution Plot
+
+```{r}
+NC_df<-combined_df5%>%
+  select(SAMPLE,REF,ALT,VARTYPE)%>%
+  filter(VARTYPE=="SNP")%>%
+  group_by(REF,ALT)%>%
+  summarise(total=n())%>%
+  mutate(Percentage=round(total/sum(total)*100,2))%>%
+  ungroup()
+```
+
+```{r}
+NC_add<-data.frame(c("A","C","T","G"),
+                   c("A","C","T","G"),
+                   c(0,0,0,0),
+                   c(0,0,0,0))
+names(NC_add)<-c("REF","ALT","total","Percentage")
+
+NC_final_df<-rbind(NC_df,NC_add)
+```
+
+```{r}
+NC_plot<-NC_final_df%>%
+  ggplot(aes(x=REF,y=ALT,fill=Percentage))+
+  geom_tile()+
+  geom_text(aes(label=Percentage),color="white")+
+  labs(x="Reference",y="Sample",title="Nucleotide Substitution") +
+  scale_fill_gradient()+
+  guides(color=FALSE)+
+  theme(axis.text = element_text(size = 12,face = "bold"))+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
+  theme(panel.background=element_rect(fill = "transparent"))
+
+NC_plot
+```
