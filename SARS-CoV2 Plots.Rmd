@@ -303,7 +303,8 @@ N_plot<-df_N3%>%
   labs(x="Position",y="Sample", title = "Ns Distribution")+
   theme(legend.text = element_text(size=12))+
   theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom")+
+  theme(axis.text.y = element_blank())+
 
 N_plot
 
