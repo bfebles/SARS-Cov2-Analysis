@@ -14,6 +14,7 @@ library(ggplot2)
 library(plotly)
 library(RColorBrewer)
 library(stringr)
+library(ggpubr)
 ```
 
 ## Mutation Plot
@@ -144,6 +145,100 @@ s_plot<-S_gene%>%
   theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
   theme(axis.text.y = element_blank())
 ggplotly(s_plot,tooltip = "text")
+
+```
+## Variant-Type Barplot
+
+```{r}
+#select more colors from color brewer
+col<-brewer.pal(7,"Dark2")
+eff_col<-colorRampPalette(col)(16)
+var_col<-colorRampPalette(col)(6)
+```
+
+```{r}
+vartype_count<-combined_df5%>%
+  select(SAMPLE,GENE_POS, VARTYPE)%>%
+  group_by(GENE_POS, VARTYPE) %>%
+  summarise(total=n()) %>%
+  group_by(GENE_POS)%>%  #group_by month collected to get total sum of lineage in that month
+  mutate(Percentage=round(total/sum(total)*100,2))%>%
+  ungroup()
+```
+
+```{r,fig.width=6,fig.height=4}
+vartype_plot<-vartype_count%>%
+  distinct(GENE_POS,VARTYPE,Percentage)%>%
+  ggplot(aes(x=GENE_POS, y=Percentage, fill=VARTYPE))+
+  geom_bar(stat = "identity", position = "dodge")+
+  scale_y_continuous(breaks = c(0,10,20,30,40,50,60,70,80,90,100))+
+  scale_fill_manual(values=var_col)+
+  labs(x= "GENE", y= "%of Total Count", fill = "Variant Type", title="Variant Type Distribution")+
+  theme_pubr()
+
+vartype_plot
+
+```
+
+## Variant-Effect Barplot
+
+```{r}
+Effect_count<-combined_df5 %>% 
+  select(SAMPLE,GENE_POS, EFFECT)%>%
+  group_by(GENE_POS, EFFECT) %>%
+  summarise(total=n()) %>%
+  group_by(GENE_POS)%>%  #group_by month collected to get total sum of lineage in that month
+  mutate(Percentage=round(total/sum(total)*100,2))%>%
+  ungroup()
+
+```
+
+```{r,fig.width=8,fig.height=4}
+Effect_plot<-Effect_count%>%
+  distinct(GENE_POS,EFFECT,Percentage)%>%
+  ggplot(aes(x=GENE_POS, y=Percentage, fill=EFFECT))+
+  geom_bar(stat = "identity")+ scale_fill_manual(values=eff_col)+
+  scale_y_continuous(breaks = c(0,10,20,30,40,50,60,70,80,90,100))+
+  labs(x= "GENE", y= "%of Total Count", fill = "Mutation Effect", title = "Variant Effect Distribution")+
+  theme(legend.position = "top")+ theme_pubr()
+Effect_plot
+```
+
+## Nucleotide Substitution Plot
+
+```{r}
+NC_df<-combined_df5%>%
+  select(SAMPLE,REF,ALT,VARTYPE)%>%
+  filter(VARTYPE=="SNP")%>%
+  group_by(REF,ALT)%>%
+  summarise(total=n())%>%
+  mutate(Percentage=round(total/sum(total)*100,2))%>%
+  ungroup()
+```
+
+```{r}
+NC_add<-data.frame(c("A","C","T","G"),
+                   c("A","C","T","G"),
+                   c(0,0,0,0),
+                   c(0,0,0,0))
+names(NC_add)<-c("REF","ALT","total","Percentage")
+
+NC_final_df<-rbind(NC_df,NC_add)
+```
+
+```{r}
+NC_plot<-NC_final_df%>%
+  ggplot(aes(x=REF,y=ALT,fill=Percentage))+
+  geom_tile()+
+  geom_text(aes(label=Percentage),color="white")+
+  labs(x="Reference",y="Sample",title="Nucleotide Substitution") +
+  scale_fill_gradient()+
+  guides(color=FALSE)+
+  theme(axis.text = element_text(size = 12,face = "bold"))+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
+  theme(panel.background=element_rect(fill = "transparent"))
+
+NC_plot
 ```
 
 ## Ns Plot
@@ -212,40 +307,4 @@ N_plot<-df_N3%>%
 
 N_plot
 
-```
-## Nucleotide Substitution Plot
-
-```{r}
-NC_df<-combined_df5%>%
-  select(SAMPLE,REF,ALT,VARTYPE)%>%
-  filter(VARTYPE=="SNP")%>%
-  group_by(REF,ALT)%>%
-  summarise(total=n())%>%
-  mutate(Percentage=round(total/sum(total)*100,2))%>%
-  ungroup()
-```
-
-```{r}
-NC_add<-data.frame(c("A","C","T","G"),
-                   c("A","C","T","G"),
-                   c(0,0,0,0),
-                   c(0,0,0,0))
-names(NC_add)<-c("REF","ALT","total","Percentage")
-
-NC_final_df<-rbind(NC_df,NC_add)
-```
-
-```{r}
-NC_plot<-NC_final_df%>%
-  ggplot(aes(x=REF,y=ALT,fill=Percentage))+
-  geom_tile()+
-  geom_text(aes(label=Percentage),color="white")+
-  labs(x="Reference",y="Sample",title="Nucleotide Substitution") +
-  scale_fill_gradient()+
-  guides(color=FALSE)+
-  theme(axis.text = element_text(size = 12,face = "bold"))+
-  theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
-  theme(panel.background=element_rect(fill = "transparent"))
-
-NC_plot
 ```
