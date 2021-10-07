@@ -309,3 +309,18 @@ N_plot<-df_N3%>%
 N_plot
 
 ```
+
+## Ns Interactive plot through Plotly
+```{r}
+N_plot<-df_N3%>%
+  ggplot(aes(x = mis_start, y = SAMPLE))+
+  geom_linerange(aes(xmin = mis_start, xmax = mis_end),linetype=4,color='blue')+ 
+  scale_x_continuous(breaks = c(0,2500,5000,7500,10000,12500,15000,17500,20000,22500,25000,27500,30000), expand = c(0, 0))+
+  labs(x="Position",y="Sample", title = "Ns Distribution")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))+
+  theme(axis.text = element_text(size = 8))+
+  theme(legend.position = "bottom")+
+  theme(axis.text.y = element_blank())
+
+ggplotly(N_plot,tooltip = 'SAMPLE')
+```
