@@ -1,5 +1,5 @@
 ---
-title: "SARS-CoV2 Variant Plot"
+title: "SARS-CoV2 Analysis"
 author: "Binita febles"
 date: "9/16/2021"
 output: html_document
