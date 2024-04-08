@@ -116,7 +116,6 @@ variant_plot<-combined_df5 %>%
   theme(legend.position = "bottom")
 
 variant_plot
-
 ```
 
 ## 'S' gene mutation plot
@@ -310,7 +309,7 @@ N_plot
 
 ```
 
-## Ns Interactive plot through Plotly
+## Missing Ns Interactive plot through Plotly
 ```{r}
 N_plot<-df_N3%>%
   ggplot(aes(x = mis_start, y = SAMPLE))+
